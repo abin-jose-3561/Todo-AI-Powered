@@ -21,3 +21,8 @@ export const updateTodo = async (id: string, todo: Omit<Todo, 'id'>): Promise<To
 export const deleteTodo = async (id: string): Promise<void> => {
   await axios.delete(`${API_URL}/${id}`);
 };
+
+export const sendChatMessage = async (message: string, history: any[] = []): Promise<any> => {
+  const response = await axios.post('http://localhost:5000/api/chat', { message, history });
+  return response.data;
+};

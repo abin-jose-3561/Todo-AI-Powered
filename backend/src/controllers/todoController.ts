@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Todo } from '../models/todo';
 
 // In-memory data store
-let todos: Todo[] = [];
+export let todos: Todo[] = [];
 
 export const getTodos = (req: Request, res: Response) => {
   res.status(200).json(todos);

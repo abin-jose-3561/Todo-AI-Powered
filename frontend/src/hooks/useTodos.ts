@@ -36,6 +36,10 @@ export const useTodos = () => {
     }
   };
 
+  const addTodoLocal = (newTodo: Todo) => {
+    setTodos(prev => [...prev, newTodo]);
+  };
+
   const editTodo = async (id: string, title: string, message: string) => {
     try {
       const updated = await api.updateTodo(id, { title, message });
@@ -59,5 +63,5 @@ export const useTodos = () => {
     }
   };
 
-  return { todos, loading, error, addTodo, editTodo, removeTodo };
+  return { todos, loading, error, addTodo, addTodoLocal, editTodo, removeTodo };
 };

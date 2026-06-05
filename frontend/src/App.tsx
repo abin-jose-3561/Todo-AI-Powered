@@ -1,9 +1,9 @@
-import { TodoForm } from './components/TodoForm';
+import { ChatAssistant } from './components/ChatAssistant';
 import { TodoList } from './components/TodoList';
 import { useTodos } from './hooks/useTodos';
 
 function App() {
-  const { todos, loading, error, addTodo, editTodo, removeTodo } = useTodos();
+  const { todos, loading, error, addTodoLocal, editTodo, removeTodo } = useTodos();
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -25,7 +25,7 @@ function App() {
           </div>
         )}
 
-        <TodoForm onAdd={addTodo} />
+        <ChatAssistant onTodoCreated={addTodoLocal} />
         
         <div className="mt-12">
           <h2 className="text-2xl font-bold mb-6 text-center text-textMain max-w-7xl mx-auto px-4">Your Tasks</h2>

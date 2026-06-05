@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import todoRoutes from './routes/todoRoutes';
+import chatRoutes from './routes/chatRoutes';
 
 const app = express();
 
@@ -9,6 +10,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/todos', todoRoutes);
+app.use('/api/chat', chatRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
