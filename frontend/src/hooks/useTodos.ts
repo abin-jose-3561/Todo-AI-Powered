@@ -63,5 +63,5 @@ export const useTodos = () => {
     }
   };
 
-  return { todos, loading, error, addTodo, addTodoLocal, editTodo, removeTodo };
+  return { todos, loading, error, addTodo, addTodoLocal, editTodo, removeTodo, fetchTodos };
 };

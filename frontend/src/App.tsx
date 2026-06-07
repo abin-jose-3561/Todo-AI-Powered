@@ -3,7 +3,7 @@ import { TodoList } from './components/TodoList';
 import { useTodos } from './hooks/useTodos';
 
 function App() {
-  const { todos, loading, error, addTodoLocal, editTodo, removeTodo } = useTodos();
+  const { todos, loading, error, addTodo, editTodo, removeTodo, fetchTodos } = useTodos();
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -25,7 +25,7 @@ function App() {
           </div>
         )}
 
-        <ChatAssistant onTodoCreated={addTodoLocal} />
+        <ChatAssistant onAddTodo={addTodo} onEditTodo={editTodo} onGetTodos={fetchTodos} />
         
         <div className="mt-12">
           <h2 className="text-2xl font-bold mb-6 text-center text-textMain max-w-7xl mx-auto px-4">Your Tasks</h2>

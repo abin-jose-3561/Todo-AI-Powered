@@ -1,31 +1,17 @@
 import { Request, Response } from 'express';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { v4 as uuidv4 } from 'uuid';
-import { Todo } from '../models/todo';
-
-// We need access to the in-memory store from todoController, 
-// but since it's just a demo, we can import the add logic or export the array.
-// For now, let's just require it or manage a simple export if we can.
-// Actually, in todoController.ts, `todos` is let todos = []. It's not exported.
-// Let's create a shared store or just redefine it here temporarily and we'll fix todoController later to export the array.
-// In-memory data store
-// We need access to the in-memory store from todoController, 
-// but since it's just a demo, we can import the add logic or export the array.
-// For now, let's just require it or manage a simple export if we can.
-// Actually, in todoController.ts, `todos` is let todos = []. It's not exported.
-// Let's create a shared store or just redefine it here temporarily and we'll fix todoController later to export the array.
-import { todos } from './todoController';
 
 // System prompt to instruct Gemini
 const systemInstruction = `
 You are a friendly and helpful assistant managing a TODO list. 
-Your primary goal is to help the user create a new TODO task.
-A task requires two fields: 'title' and 'message' (description).
+Your primary goal is to help the user manage their TODO tasks.
 
-When the user asks to create a task, check if both 'title' and 'message' are provided in their request or chat history.
-If either is missing, politely ask the user for the missing information. Do NOT call the create_todo tool until you have both fields.
-Once you have both the 'title' and the 'message', use the 'create_todo' tool to create the task, and inform the user that it has been created successfully.
-Keep your responses concise and friendly.
+You can perform the following actions using the provided tools:
+1. create_todo: When the user wants to create a new task, check if both 'title' and 'message' (description) are provided. If either is missing, politely ask for it. Once you have both, use this tool.
+2. update_todo: When the user wants to update a task, you need the 'id' of the task and the new 'title' and 'message'. If missing, ask for them. Then use this tool.
+3. get_todos: When the user wants to see their tasks or list them, use this tool to fetch the tasks.
+
+Do NOT confirm the action is done until the tool response is received. Keep your responses concise and friendly.
 `;
 
 const createTodoTool = {
@@ -34,16 +20,33 @@ const createTodoTool = {
   parameters: {
     type: "object",
     properties: {
-      title: {
-        type: "string",
-        description: "The title of the TODO task.",
-      },
-      message: {
-        type: "string",
-        description: "The detailed message or description of the TODO task.",
-      },
+      title: { type: "string", description: "The title of the TODO task." },
+      message: { type: "string", description: "The detailed message or description of the TODO task." },
     },
     required: ["title", "message"],
+  },
+};
+
+const updateTodoTool = {
+  name: "update_todo",
+  description: "Updates an existing TODO task.",
+  parameters: {
+    type: "object",
+    properties: {
+      id: { type: "string", description: "The ID of the TODO task to update." },
+      title: { type: "string", description: "The new title of the TODO task." },
+      message: { type: "string", description: "The new message or description." },
+    },
+    required: ["id", "title", "message"],
+  },
+};
+
+const getTodosTool = {
+  name: "get_todos",
+  description: "Gets the list of all TODO tasks.",
+  parameters: {
+    type: "object",
+    properties: {},
   },
 };
 
@@ -61,7 +64,7 @@ export const chatWithAi = async (req: Request, res: Response) => {
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
       systemInstruction: systemInstruction,
-      tools: [{ functionDeclarations: [createTodoTool as any] }],
+      tools: [{ functionDeclarations: [createTodoTool as any, updateTodoTool as any, getTodosTool as any] }],
     });
 
     const chat = model.startChat({
@@ -72,39 +75,32 @@ export const chatWithAi = async (req: Request, res: Response) => {
     const response = result.response;
 
     let aiText = "";
-    let newTodo: Todo | null = null;
+    let action: any = null;
 
     // Check if the model called a function
     const functionCalls = response.functionCalls();
     console.log("functionCalls", functionCalls)
     if (functionCalls && functionCalls.length > 0) {
       const call = functionCalls[0];
+      
       if (call.name === "create_todo") {
-        console.log("call", call)
-        const { title, message } = call.args as any;
-
-        // Create the todo
-        newTodo = {
-          id: uuidv4(),
-          title: title.trim(),
-          message: message.trim(),
-        };
-
-        // Add to our store
-        todos.push(newTodo);
-
-        // The model expects a function response if it calls a function, but since we are handling this in a single turn for simplicity,
-        // we can just return our own response text or ask the model to generate one.
-        // Let's generate a final confirmation message from the model using the function response.
-        const functionResponseResult = await chat.sendMessage([{
-          functionResponse: {
-            name: "create_todo",
-            response: { success: true, todo: newTodo }
-          }
-        }]);
-
-        aiText = functionResponseResult.response.text();
+        action = { type: "CREATE_TODO", payload: call.args };
+      } else if (call.name === "update_todo") {
+        action = { type: "UPDATE_TODO", payload: call.args };
+      } else if (call.name === "get_todos") {
+        action = { type: "GET_TODOS", payload: call.args };
       }
+      
+      // Let's generate a final confirmation message from the model using the function response.
+      // Since the actual action will be performed by the frontend, we just tell the model it was scheduled.
+      const functionResponseResult = await chat.sendMessage([{
+        functionResponse: {
+          name: call.name,
+          response: { success: true, message: "Action delegated to frontend." }
+        }
+      }]);
+
+      aiText = functionResponseResult.response.text();
     } else {
       aiText = response.text();
     }
@@ -114,7 +110,7 @@ export const chatWithAi = async (req: Request, res: Response) => {
 
     res.status(200).json({
       reply: aiText,
-      newTodo: newTodo,
+      action: action,
       history: updatedHistory
     });
 

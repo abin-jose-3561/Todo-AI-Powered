@@ -4,10 +4,12 @@ import { sendChatMessage } from '../services/api';
 import type { Todo } from '../types/todo';
 
 interface ChatAssistantProps {
-  onTodoCreated: (todo: Todo) => void;
+  onAddTodo: (title: string, message: string) => Promise<void>;
+  onEditTodo: (id: string, title: string, message: string) => Promise<void>;
+  onGetTodos: () => Promise<void>;
 }
 
-export const ChatAssistant: React.FC<ChatAssistantProps> = ({ onTodoCreated }) => {
+export const ChatAssistant: React.FC<ChatAssistantProps> = ({ onAddTodo, onEditTodo, onGetTodos }) => {
   const [messages, setMessages] = useState<Array<{ role: string; text: string }>>([
     { role: 'model', text: "Hello! I'm your AI task assistant. What would you like to add to your TODO list?" }
   ]);
@@ -39,8 +41,15 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({ onTodoCreated }) =
       setMessages(prev => [...prev, { role: 'model', text: response.reply }]);
       setHistory(response.history);
 
-      if (response.newTodo) {
-        onTodoCreated(response.newTodo);
+      if (response.action) {
+        const { type, payload } = response.action;
+        if (type === 'CREATE_TODO') {
+          await onAddTodo(payload.title, payload.message);
+        } else if (type === 'UPDATE_TODO') {
+          await onEditTodo(payload.id, payload.title, payload.message);
+        } else if (type === 'GET_TODOS') {
+          await onGetTodos();
+        }
       }
     } catch (error) {
       console.error('Chat error:', error);
